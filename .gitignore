@@ -1,0 +1,36 @@
+# ---------- Secretos / entorno ----------
+.env
+.env.*
+*.local
+appsettings.Development.json
+appsettings.*.local.json
+secrets.json
+
+# ---------- .NET ----------
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+*.userprefs
+project.lock.json
+artifacts/
+
+# ---------- Node / Angular ----------
+node_modules/
+dist/
+tmp/
+.angular/
+*.log
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+coverage/
+
+# ---------- Editores / SO ----------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
