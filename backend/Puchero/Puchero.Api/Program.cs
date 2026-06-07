@@ -9,6 +9,7 @@ using Puchero.Api.Application.Queries;
 using Puchero.Api.Domain.Services;
 using Puchero.Api.Infrastructure;
 using Puchero.Api.Infrastructure.Auth;
+using Puchero.Api.Infrastructure.ExceptionHandling;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,10 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
               .AllowAnyMethod()));
+
+// Consistent error responses (ProblemDetails) + map "user not in family" to 403.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<AccessForbiddenExceptionHandler>();
 
 // Current user (JWT sub -> FamilyId) + CQRS handlers.
 builder.Services.AddHttpContextAccessor();
@@ -89,6 +94,8 @@ builder.Services.AddSwaggerGen(o =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -30,10 +30,10 @@ Seguimiento del estado de implementación. La especificación completa está en
 
 ## ⏳ Pendiente
 
-### Backend — pulido (opcional para cerrar al 100%)
-- [ ] **Manejo de errores coherente**: hoy, si el usuario del token no está en ninguna familia,
-      `ICurrentUser` lanza y devuelve 500. Mapear a 401/403 limpio; 400 con mensaje si faltan
-      datos. (Funciona, pero los errores no son finos.)
+### Backend — pulido
+- [x] **Manejo de errores coherente**: `AccessForbiddenExceptionHandler` mapea "usuario sin
+      familia" a **403** (ProblemDetails) en vez de 500; resto de excepciones → 500 ProblemDetails.
+      Validaciones de entrada ya cubiertas (400 por nombre vacío, 404 por slot ajeno, 401 sin token).
 
 ### Frontend — Angular PWA
 - [ ] `ng new` standalone + Angular Material + tema Puchero (tokens de `design/`) + fuentes + iconos Lucide.
