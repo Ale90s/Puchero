@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Puchero.Api.Application.Commands;
 using Puchero.Api.Application.Queries;
+using Puchero.Api.Domain.Services;
 using Puchero.Api.Infrastructure;
 using Puchero.Api.Infrastructure.Auth;
 
@@ -51,6 +52,11 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<GetMealsHandler>();
 builder.Services.AddScoped<CreateMealHandler>();
 builder.Services.AddScoped<DeleteMealHandler>();
+builder.Services.AddScoped<GenerateWeekPlanHandler>();
+builder.Services.AddScoped<GetCurrentWeekHandler>();
+builder.Services.AddScoped<RerollSlotHandler>();
+builder.Services.AddScoped<SetAttendanceHandler>();
+builder.Services.AddSingleton<WeekGenerator>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
