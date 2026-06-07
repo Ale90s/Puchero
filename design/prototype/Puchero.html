@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Puchero · Prototipo</title>
+<link rel="stylesheet" href="puchero-tokens.css" />
+<style>
+  :root { --page-bg: #E8E3DA; }
+  html, body { margin: 0; padding: 0; background: var(--page-bg); }
+  body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+  button { font-family: var(--font-body); }
+
+  /* Rotación (spinner de botón + re-roll) */
+  @keyframes p-rotate { to { transform: rotate(360deg); } }
+  .p-spin { animation: p-rotate .7s linear infinite; }
+  .p-spin-el { animation: p-rotate .76s cubic-bezier(.3,.1,.3,1) infinite; }
+
+  /* Re-roll: el plato se difumina y vuelve */
+  @keyframes p-dishroll {
+    0% { opacity: 1; filter: blur(0); transform: translateY(0); }
+    40% { opacity: .2; filter: blur(2.5px); transform: translateY(3px); }
+    62% { opacity: .2; filter: blur(2.5px); transform: translateY(-3px); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+  }
+  .p-dish-rolling { animation: p-dishroll .76s ease; }
+
+  /* Toast */
+  @keyframes p-toastin { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .p-toast { animation: p-toastin .25s cubic-bezier(.2,.7,.2,1); }
+
+  /* Fade (microcopy splash + scrim) */
+  @keyframes p-fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .p-fade { animation: p-fadein .45s ease; }
+
+  /* Bottom sheet */
+  @keyframes p-sheetin { from { transform: translateY(100%); } to { transform: none; } }
+  .p-sheet { animation: p-sheetin .3s cubic-bezier(.2,.7,.2,1); }
+
+  /* Blink (puntos de carga) */
+  @keyframes p-blink { 0%,100% { opacity: .3; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
+  .p-blink { animation: p-blink 1.2s ease-in-out infinite; }
+
+  /* Vapor del puchero */
+  @keyframes p-steam {
+    0% { opacity: 0; transform: translateY(7px) scaleY(.7); }
+    25% { opacity: .55; }
+    70% { opacity: .45; }
+    100% { opacity: 0; transform: translateY(-9px) scaleY(1.1); }
+  }
+  .pot-steam { transform-origin: center bottom; }
+  .pot-steam-1 { animation: p-steam 2.6s ease-in-out infinite; }
+  .pot-steam-2 { animation: p-steam 2.6s ease-in-out infinite .55s; }
+  .pot-steam-3 { animation: p-steam 2.6s ease-in-out infinite 1.1s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .p-spin, .p-spin-el, .p-dish-rolling, .p-toast, .p-fade, .p-blink, .pot-steam, .p-sheet { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="puchero-icons.jsx"></script>
+<script type="text/babel" src="puchero-ui.jsx"></script>
+<script type="text/babel" src="puchero-data.jsx"></script>
+<script type="text/babel" src="puchero-week.jsx"></script>
+<script type="text/babel" src="puchero-screens.jsx"></script>
+<script type="text/babel" src="puchero-app.jsx"></script>
+</body>
+</html>
