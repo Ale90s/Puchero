@@ -1,6 +1,6 @@
 namespace Puchero.Api.Domain.Entities;
 
-/// <summary>Una familia (tenant). Todo lo demás cuelga de ella vía FamilyId.</summary>
+/// <summary>A family (tenant). Everything else hangs off it via FamilyId.</summary>
 public class Family
 {
     public Guid Id { get; set; }

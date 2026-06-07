@@ -1,8 +1,8 @@
 namespace Puchero.Api.Domain.Entities;
 
 /// <summary>
-/// Excepción de asistencia. Por defecto TODOS comen; una fila aquí significa
-/// que este usuario NO come en este slot. comensales = miembros − ausentes.
+/// Attendance exception. By default EVERYONE eats; a row here means
+/// this user is NOT eating in this slot. diners = members − absentees.
 /// </summary>
 public class Attendance
 {

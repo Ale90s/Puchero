@@ -2,7 +2,7 @@ using Puchero.Api.Domain.Enums;
 
 namespace Puchero.Api.Domain.Entities;
 
-/// <summary>Plato del recetario/pool de la familia.</summary>
+/// <summary>A dish in the family's recipe pool.</summary>
 public class Meal
 {
     public Guid Id { get; set; }

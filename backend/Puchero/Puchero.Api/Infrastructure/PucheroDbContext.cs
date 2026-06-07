@@ -14,7 +14,7 @@ public class PucheroDbContext(DbContextOptions<PucheroDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder b)
     {
-        // Enums guardados como texto legible en la BD (no como int).
+        // Enums stored as readable text in the DB (not as int).
         b.Entity<Meal>().Property(m => m.Category).HasConversion<string>().HasMaxLength(10);
         b.Entity<PlanSlot>().Property(s => s.Service).HasConversion<string>().HasMaxLength(10);
 
@@ -29,13 +29,13 @@ public class PucheroDbContext(DbContextOptions<PucheroDbContext> options) : DbCo
             .HasOne(m => m.Family).WithMany(f => f.Meals)
             .HasForeignKey(m => m.FamilyId).OnDelete(DeleteBehavior.Cascade);
 
-        // --- WeekPlan: una sola semana por (familia, lunes) ---
+        // --- WeekPlan: a single week per (family, Monday) ---
         b.Entity<WeekPlan>().HasIndex(w => new { w.FamilyId, w.WeekStart }).IsUnique();
         b.Entity<WeekPlan>()
             .HasOne(w => w.Family).WithMany(f => f.WeekPlans)
             .HasForeignKey(w => w.FamilyId).OnDelete(DeleteBehavior.Cascade);
 
-        // --- PlanSlot: un slot por (semana, día, servicio) ---
+        // --- PlanSlot: one slot per (week, day, service) ---
         b.Entity<PlanSlot>().HasIndex(s => new { s.WeekPlanId, s.DayOfWeek, s.Service }).IsUnique();
         b.Entity<PlanSlot>()
             .HasOne(s => s.WeekPlan).WithMany(w => w.Slots)
@@ -44,7 +44,7 @@ public class PucheroDbContext(DbContextOptions<PucheroDbContext> options) : DbCo
             .HasOne(s => s.Meal).WithMany()
             .HasForeignKey(s => s.MealId).OnDelete(DeleteBehavior.SetNull);
 
-        // --- Attendance: una fila por (slot, usuario) = ese usuario NO come ahí ---
+        // --- Attendance: one row per (slot, user) = that user does NOT eat there ---
         b.Entity<Attendance>().HasIndex(a => new { a.PlanSlotId, a.UserId }).IsUnique();
         b.Entity<Attendance>()
             .HasOne(a => a.PlanSlot).WithMany(s => s.Absences)

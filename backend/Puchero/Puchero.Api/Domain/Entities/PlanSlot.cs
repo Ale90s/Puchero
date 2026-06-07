@@ -3,20 +3,20 @@ using Puchero.Api.Domain.Enums;
 namespace Puchero.Api.Domain.Entities;
 
 /// <summary>
-/// Un hueco del menú: un día (0=lunes..6=domingo) y un servicio (comida/cena),
-/// con el plato asignado. 14 por WeekPlan.
+/// A menu slot: a day (0=Monday..6=Sunday) and a service (lunch/dinner),
+/// with the assigned meal. 14 per WeekPlan.
 /// </summary>
 public class PlanSlot
 {
     public Guid Id { get; set; }
     public Guid WeekPlanId { get; set; }
-    public int DayOfWeek { get; set; }        // 0 = lunes ... 6 = domingo
+    public int DayOfWeek { get; set; }        // 0 = Monday ... 6 = Sunday
     public Service Service { get; set; }
     public Guid? MealId { get; set; }
 
     public WeekPlan WeekPlan { get; set; } = null!;
     public Meal? Meal { get; set; }
 
-    /// <summary>Ausencias: existencia de una fila = ese usuario NO come en este slot.</summary>
+    /// <summary>Absences: a row's existence = that user is NOT eating in this slot.</summary>
     public ICollection<Attendance> Absences { get; set; } = new List<Attendance>();
 }

@@ -1,6 +1,6 @@
 namespace Puchero.Api.Domain.Enums;
 
-/// <summary>Servicio de un slot del menú: comida o cena.</summary>
+/// <summary>The service a menu slot belongs to: lunch or dinner.</summary>
 public enum Service
 {
     Lunch,

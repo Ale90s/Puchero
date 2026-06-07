@@ -1,22 +1,29 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Puchero.Api.Application.Commands;
+using Puchero.Api.Application.Queries;
 using Puchero.Api.Infrastructure;
+using Puchero.Api.Infrastructure.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Persistencia: EF Core + PostgreSQL (Supabase), nombres snake_case en la BD ---
+// --- Persistence: EF Core + PostgreSQL (Supabase), snake_case names in the DB ---
 builder.Services.AddDbContext<PucheroDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres"))
            .UseSnakeCaseNamingConvention());
 
-// --- Autenticación: validar el JWT que emite Supabase (clave asimétrica vía JWKS) ---
+// --- Authentication: validate the JWT issued by Supabase (asymmetric key via JWKS) ---
 var supabase = builder.Configuration.GetSection("Supabase");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // Authority descubre OIDC + JWKS automáticamente desde Supabase.
+        // Authority auto-discovers OIDC + JWKS from Supabase.
         options.Authority = supabase["Issuer"];
+        // Don't remap claims: we want to read 'sub' exactly as it comes in the token.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidIssuer = supabase["Issuer"],
@@ -29,7 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// --- CORS para el front Angular en desarrollo ---
+// --- CORS for the Angular frontend in development ---
 const string FrontendCors = "frontend";
 builder.Services.AddCors(options =>
     options.AddPolicy(FrontendCors, policy =>
@@ -37,7 +44,19 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
-builder.Services.AddControllers();
+// Current user (JWT sub -> FamilyId) + CQRS handlers.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<GetMealsHandler>();
+builder.Services.AddScoped<CreateMealHandler>();
+builder.Services.AddScoped<DeleteMealHandler>();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        // Enums as text in JSON: lunch/dinner/both.
+        o.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -55,7 +74,7 @@ app.UseCors(FrontendCors);
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Endpoint tonto para el cron anti-sleep de Render (no requiere auth).
+// Dumb endpoint for Render's anti-sleep cron (no auth required).
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
    .AllowAnonymous();
 
