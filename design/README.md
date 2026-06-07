@@ -31,88 +31,25 @@ en *Design tokens*.
 | Capa | Tecnología |
 |---|---|
 | Frontend | Angular 17+ standalone + TypeScript, Angular Material, Signals + servicios |
-| Backend | .NET + EF Core + CQRS (MediatR) |
+| Backend | .NET + EF Core + CQRS (ligero, sin MediatR) |
 | BD | Supabase (PostgreSQL) |
 | Auth | Supabase Auth (email/password, JWT) |
 | Hosting | Front → Vercel · Back → Render (free) |
 
 ---
 
-## Modelo de datos (fuente de verdad — mapea a entidades de backend)
-El prototipo ya modela los datos en una forma muy cercana a las entidades. Recomendado:
+## Modelo de datos, endpoints y lógica → ver la especificación
 
-```
-Family
-  id (uuid, PK)
-  name
-
-User (miembro de la familia)
-  id (uuid, PK)            // = Supabase Auth user id
-  familyId (FK → Family)
-  name (string)            // "Marta", "Javier"…
-  colorIndex (int 0–4)     // tono del avatar (ver AVATAR_TONES)
-  email (string, unique)
-
-Meal (plato del "pool"/recetario)
-  id (uuid, PK)
-  familyId (FK → Family)
-  name (string)            // "Lentejas estofadas"
-  category (enum: 'lunch' | 'dinner' | 'both')  // comida / cena / ambas
-  createdAt (timestamptz)
-  // V2+: lastUsedAt (para "evitar recientes")
-
-WeekPlan
-  id (uuid, PK)
-  familyId (FK → Family)
-  weekStart (date)         // lunes de la semana (ISO)
-
-PlanSlot   (14 por WeekPlan)
-  id (uuid, PK)
-  weekPlanId (FK → WeekPlan)
-  dayOfWeek (int 0–6)      // 0 = lunes … 6 = domingo
-  service (enum: 'lunch' | 'dinner')
-  mealId (FK → Meal, nullable)
-
-Attendance   (excepciones — por defecto TODOS comen)
-  // Solo se guardan los que NO comen, como en el prototipo (slot.absent[])
-  id (uuid, PK)
-  planSlotId (FK → PlanSlot)
-  userId (FK → User)
-  // existencia de la fila = "este usuario NO come en este slot"
-```
-
-**Decisión de diseño clave (del prototipo):** la asistencia se modela por **ausencia**.
-Por defecto todos cuentan; solo se persiste quién se desapunta (`absent` en el front,
-filas en `Attendance` en el back). Así `comensales = totalMiembros − ausentes`.
-
-### Lógica de generación (replicar en backend, comando CQRS `GenerateWeekPlan`)
-- **Las comidas tienen categoría** (`lunch` / `dinner` / `both`). Un slot de **comida** solo
-  puede recibir platos `lunch` o `both`; un slot de **cena**, platos `dinner` o `both`. Nunca se
-  cruzan.
-- Para cada uno de los 14 slots, elegir al azar un `Meal` **elegible para ese servicio** que no
-  se haya usado ya esa semana (sin repetir dentro de la semana).
-- Si no quedan platos elegibles sin usar para un servicio, se permite repetir (avisar en UI).
-- Para una semana sin repetir hacen falta **≥7 platos elegibles por servicio** (es decir, 7
-  para comida y 7 para cena, contando los `both` en ambos).
-- **Re-roll** (`RerollSlot`): elegir un `Meal` al azar **elegible para el servicio de ese slot**,
-  **excluyendo el actual** e, idealmente, los ya usados esa semana.
-
----
-
-## Endpoints sugeridos (CQRS / MediatR)
-```
-POST   /auth (Supabase)                      → login email/password, devuelve JWT
-GET    /api/meals                            → pool de la familia
-POST   /api/meals            {name, category}  → añadir plato
-DELETE /api/meals/{id}                       → eliminar plato
-GET    /api/week?weekStart=YYYY-MM-DD        → WeekPlan + slots + meals + attendance
-POST   /api/week/generate    {weekStart}     → genera/regenera la semana (14 slots)
-POST   /api/week/slots/{id}/reroll           → cambia el plato de un slot
-PUT    /api/week/slots/{id}/attendance {userId, eats:bool}  → marca asistencia
-GET    /health                               → para el cron anti-sleep de Render
-```
-Todas las rutas `/api/*` validan el JWT de Supabase (interceptor en Angular añade
-`Authorization: Bearer`).
+> El **modelo de datos, los endpoints de la API y la lógica de negocio** viven en la
+> especificación, que es la fuente de verdad:
+> [`docs/documento-definitivo.md`](../docs/documento-definitivo.md) (§4, §8, §9).
+> Este handoff se centra en el **diseño visual**. Solo se recuerdan aquí las decisiones que
+> condicionan directamente la UI:
+>
+> - **Asistencia por ausencia:** por defecto todos cuentan; solo se persiste quién **no** come
+>   (en el front, `slot.absent[]`). Comensales = miembros − ausentes.
+> - **Categoría del plato** (`lunch` / `dinner` / `both`): determina el chip y el icono del
+>   plato, y por qué un slot de comida nunca recibe un plato solo-cena.
 
 ---
 

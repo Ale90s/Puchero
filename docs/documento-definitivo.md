@@ -36,7 +36,7 @@ Una aplicación que:
 | UI              | Angular Material                            |
 | Estado          | Signals + servicios (sin NgRx)             |
 | Hosting front   | Vercel                                       |
-| Backend         | .NET + Entity Framework Core + CQRS (MediatR)|
+| Backend         | .NET + Entity Framework Core + CQRS (ligero, sin MediatR)|
 | Hosting backend | Render (plan free)                           |
 | Base de datos   | Supabase (PostgreSQL)                        |
 | Autenticación   | Supabase Auth (email/password, JWT)         |
@@ -53,10 +53,11 @@ Una aplicación que:
 erDiagram
     FAMILY ||--o{ USER : tiene
     FAMILY ||--o{ MEAL : tiene
-    FAMILY ||--o{ WEEKLYPLAN : tiene
-    WEEKLYPLAN ||--o{ WEEKLYPLANSLOT : contiene
-    MEAL ||--o{ WEEKLYPLANSLOT : asignada
-    USER ||--o{ MEALATTENDANCE : marca
+    FAMILY ||--o{ WEEKPLAN : tiene
+    WEEKPLAN ||--o{ PLANSLOT : contiene
+    MEAL ||--o{ PLANSLOT : asignada
+    PLANSLOT ||--o{ ATTENDANCE : ausencias
+    USER ||--o{ ATTENDANCE : marca
     FAMILY {
         Guid Id PK
         string Name
@@ -64,47 +65,51 @@ erDiagram
     USER {
         Guid Id PK
         string Email
+        string Name
+        int ColorIndex
         Guid FamilyId FK
     }
     MEAL {
         Guid Id PK
         string Name
+        MealCategory Category
+        DateTime CreatedAt
         Guid FamilyId FK
     }
-    WEEKLYPLAN {
+    WEEKPLAN {
         Guid Id PK
         Guid FamilyId FK
-        DateOnly WeekStartDate
+        DateOnly WeekStart
     }
-    WEEKLYPLANSLOT {
+    PLANSLOT {
         Guid Id PK
-        Guid WeeklyPlanId FK
-        DateOnly Date
+        Guid WeekPlanId FK
+        int DayOfWeek
         Service Service
         Guid MealId FK
     }
-    MEALATTENDANCE {
+    ATTENDANCE {
         Guid Id PK
+        Guid PlanSlotId FK
         Guid UserId FK
-        DateOnly Date
-        Service Service
-        bool IsAttending
     }
 ```
 
 **Entidades:**
 
 - **Family** — `Id`, `Name`.
-- **User** — `Id` (= el uuid que asigna Supabase en el login), `Email`, `FamilyId`.
-- **Meal** — `Id`, `Name`, `FamilyId`. (Las categorías llegan en V2.)
-- **WeeklyPlan** — `Id`, `FamilyId`, `WeekStartDate`.
-- **WeeklyPlanSlot** — `Id`, `WeeklyPlanId`, `Date`, `Service` (enum `Lunch` / `Dinner`), `MealId`. Cada semana son **14 slots** (7 días × 2 servicios).
-- **MealAttendance** — `Id`, `UserId`, `Date`, `Service`, `IsAttending`. Por defecto todos comen en casa; una fila aquí representa una excepción ("este día, en este servicio, fulano no está").
+- **User** — `Id` (= el uuid que asigna Supabase en el login), `Email`, `Name`, `ColorIndex` (0–4, tono del avatar), `FamilyId`.
+- **Meal** — `Id`, `Name`, `Category` (enum `Lunch` / `Dinner` / `Both`), `CreatedAt`, `FamilyId`.
+- **WeekPlan** — `Id`, `FamilyId`, `WeekStart` (lunes ISO de la semana).
+- **PlanSlot** — `Id`, `WeekPlanId`, `DayOfWeek` (0 = lunes … 6 = domingo), `Service` (enum `Lunch` / `Dinner`), `MealId` (nullable). Cada semana son **14 slots** (7 días × 2 servicios).
+- **Attendance** — `Id`, `PlanSlotId`, `UserId`. **Asistencia por ausencia**: por defecto todos comen; una fila aquí significa que ese usuario **NO** come en ese slot. `comensales = miembros − ausentes`.
 
 **Convenciones:**
 
-- La semana va de **lunes a domingo**.
+- La semana va de **lunes a domingo**; `WeekStart` es el lunes.
 - La "semana actual" es la que **contiene el día de hoy**.
+- La **categoría del plato manda en la generación**: un slot de comida solo admite platos `Lunch`/`Both`; uno de cena, `Dinner`/`Both`.
+- En la BD, tablas y columnas en **snake_case** (vía EFCore.NamingConventions); los enums se guardan como **texto**.
 
 ---
 
@@ -141,10 +146,7 @@ Cliente (Angular PWA)
         │  JWT
         ▼
 API Controller (fino, solo enruta)
-        │
-        ▼
-IMediator (MediatR)
-        │
+        │  inyecta y llama al handler directamente
    ┌────┴─────────────────────┐
    ▼ ESCRITURA                 ▼ LECTURA
 Command handler            Query handler
@@ -162,25 +164,30 @@ DbContext directo          DbContext directo
 
 ### Decisiones
 
-- **Controller fino**: solo traduce HTTP ↔ command/query y lo manda por `IMediator`. Depende únicamente de MediatR.
+- **Controller fino**: solo traduce HTTP ↔ command/query e invoca al handler correspondiente (inyectado por DI). Cero lógica.
 - **El handler es la capa de servicio.** No hay una capa "Service" aparte que se solape con el handler.
 - **Acceso a datos con `DbContext` directo en ambos lados** (lectura y escritura). **Sin capa de repositorio**: con EF Core, el `DbContext` ya es el Unit of Work y cada `DbSet<T>` ya es el repositorio. El handler **usa** EF Core; nunca hace de repositorio él mismo.
 - **Lectura**: el query handler proyecta directo a DTO con `.Select()`.
 - **Escritura**: el command handler carga la entidad, la muta y hace `SaveChangesAsync()`.
-- **`WeekGenerator`** vive como **domain service**, invocado por el `GenerateWeeklyPlanCommandHandler`.
-- **MediatR** como mediator. ⚠️ Verificar su **licencia actual** antes de añadirlo (hubo un cambio hacia modelo comercial en 2025); para un proyecto familiar pequeño casi seguro se cae en el tramo gratuito.
+- **`WeekGenerator`** vive como **domain service**, invocado por el `GenerateWeekPlanHandler`.
+- **Sin MediatR.** El controller llama al handler directamente (DI). Se mantiene la separación CQRS (handlers de Command/Query) sin la indirección ni la dependencia comercial de MediatR. Si en el futuro hicieran falta *pipeline behaviors* globales, migrar a MediatR es trivial porque los handlers ya están separados.
 
 ### Estructura de carpetas
 
 ```
-/backend
-  /Api              → Controllers finos
+/backend/Puchero/Puchero.Api   → un único proyecto Web API (.sln solo del backend)
+  /Controllers      → controllers finos
   /Application
-    /Commands       → CreateMeal, GenerateWeeklyPlan, RerollSlot, SetAttendance...
-    /Queries        → GetCurrentWeeklyPlan, GetMeals...
-                      (cada uno: request + handler + response/DTO)
-  /Domain           → Entidades, enums (Service), domain services (WeekGenerator)
-  /Infrastructure   → DbContext (EF Core), migraciones, config validación JWT Supabase
+    /Commands       → CreateMeal, DeleteMeal, GenerateWeekPlan, RerollSlot, SetAttendance...
+    /Queries        → GetCurrentWeek, GetMeals...
+    /Dtos           → DTOs de respuesta
+  /Domain
+    /Entities       → entidades
+    /Enums          → Service, MealCategory   (+ domain services como WeekGenerator)
+  /Infrastructure
+    /Auth           → ICurrentUser (sub del JWT → FamilyId) + config validación JWT Supabase
+    PucheroDbContext.cs  (EF Core)
+  /Migrations       → migraciones EF Core
 ```
 
 ### Secretos
@@ -207,9 +214,9 @@ DbContext directo          DbContext directo
       auth.guard.ts          → protege rutas
   /features
       /auth                  → pantalla de login
-      /meals                 → listar y crear comidas
-      /planner               → vista semanal (lunes-domingo, comida/cena, botón re-roll)
-      /calendar              → asistencia (desapuntarse por servicio)
+      /meals                 → listar, crear y borrar comidas
+      /week                  → vista semanal: menú (lunes-domingo, comida/cena) + re-roll
+                               + asistencia integrada (bottom sheet "¿Quién come?")
   /shared
       /components            → reutilizables
       /models                → interfaces TS que reflejan los DTOs del backend
@@ -223,15 +230,18 @@ Como el backend usa el plan free de Render (ver §9), tras un rato sin uso el pr
 
 ## 8. API (endpoints)
 
-| Método | Ruta                                   | Descripción |
-|--------|----------------------------------------|-------------|
-| `POST` | `/weekly-plan/generate`                | Genera la semana (14 slots). |
-| `GET`  | `/weekly-plan/current`                 | Devuelve el menú de la semana actual **+ la asistencia de toda la familia** (una sola llamada). |
-| `PUT`  | `/weekly-plan/slots/{slotId}/reroll`   | Cambia la comida de un slot concreto. |
-| `GET`  | `/meals`                               | Lista las comidas de la familia. |
-| `POST` | `/meals`                               | Crea una comida. |
-| `PUT`  | `/attendance`                          | Marca asistencia. Body: `{ date, service, isAttending }`. El `userId` sale del JWT (cada uno marca la suya). |
-| `GET`  | `/health`                              | Endpoint tonto (200 OK) para el cron que mantiene despierto el backend. |
+Todas las rutas (salvo `/health`) requieren el JWT de Supabase; el `FamilyId` se deriva del usuario del token. **Sin prefijo `/api`.**
+
+| Método   | Ruta                                       | Descripción |
+|----------|--------------------------------------------|-------------|
+| `GET`    | `/meals`                                   | Lista las comidas del pool de la familia. |
+| `POST`   | `/meals`                                   | Crea una comida. Body: `{ name, category }`. |
+| `DELETE` | `/meals/{id}`                              | Elimina una comida del pool. |
+| `POST`   | `/weekly-plan/generate`                    | Genera la semana actual (14 slots). |
+| `GET`    | `/weekly-plan/current`                     | Devuelve el menú de la semana actual **+ la asistencia de toda la familia** (una sola llamada). |
+| `PUT`    | `/weekly-plan/slots/{slotId}/reroll`       | Cambia la comida de un slot concreto. |
+| `PUT`    | `/weekly-plan/slots/{slotId}/attendance`   | Marca asistencia de un miembro en un slot. Body: `{ userId, eats }`. Dispositivo compartido: cualquiera puede marcar a cualquiera. |
+| `GET`    | `/health`                                  | Endpoint tonto (200 OK) para el cron anti-sleep de Render. |
 
 ---
 
@@ -240,20 +250,20 @@ Como el backend usa el plan free de Render (ver §9), tras un rato sin uso el pr
 ### Generar semana
 
 - Se generan **14 slots** (7 días × comida + cena).
-- Reparto **sin repetir** (sin reemplazo) a partir del pool de comidas de la familia.
-- Si el pool tiene **menos de 14 comidas**, se permite **repetir lo mínimo imprescindible** para completar la semana, en vez de que la generación falle. Así siempre se genera, aunque haya pocas comidas.
-- 💡 Recomendado tener ≥14 comidas sembradas (idealmente 20-25) para una semana sin repeticiones.
+- Para cada slot se elige al azar un plato **elegible para ese servicio** (comida → `Lunch`/`Both`; cena → `Dinner`/`Both`) que **no se haya usado ya esa semana** (sin repetir).
+- Si no quedan platos elegibles sin usar para un servicio, se permite **repetir lo mínimo imprescindible** en vez de fallar. Así siempre se genera.
+- 💡 Para una semana sin repetir hacen falta **≥7 platos elegibles por servicio** (los `Both` cuentan en ambos). Recomendado tener 20-25 platos.
 
 ### Re-roll
 
 - Reemplaza **un único slot**.
-- La nueva comida debe ser **distinta a las que ya están en la semana** (cuando el pool lo permita).
+- La nueva comida debe ser **elegible para el servicio de ese slot** y, a ser posible, **distinta a las que ya están en la semana** y a la actual.
 
 ### Asistencia
 
-- Por defecto, todos comen en casa.
-- Cada usuario marca **su propia** asistencia, por **día y servicio** ("hoy no ceno").
-- El menú y la asistencia son **independientes**: el planner decide *qué* se cocina; la asistencia dice *para cuántos*. Solo se muestran juntos.
+- Por defecto, todos comen en casa; solo se persiste **quién no come** (una fila `Attendance` por ausencia).
+- Se marca **por slot**. Al ser un **dispositivo compartido en casa**, cualquiera puede marcar la asistencia de cualquiera.
+- El menú y la asistencia son **independientes**: el planner decide *qué* se cocina; la asistencia dice *para cuántos*. Se muestran juntos en la pantalla de Semana.
 
 ---
 
@@ -320,6 +330,7 @@ Como el backend usa el plan free de Render (ver §9), tras un rato sin uso el pr
 
 **❌ No hacer**
 - Auth manual
+- MediatR (CQRS sin mediador: el controller llama al handler directamente)
 - Microservicios / Kubernetes
 - Repositorio genérico sobre EF Core
 - NgRx

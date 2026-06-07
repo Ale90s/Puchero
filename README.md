@@ -24,7 +24,7 @@ Pensado para una familia, con el modelo preparado para escalar a varias en el fu
 | Frontend        | Angular (standalone, v17+) + TypeScript      |
 | UI              | Angular Material                             |
 | Estado          | Signals + servicios                          |
-| Backend         | .NET + Entity Framework Core + CQRS (MediatR)|
+| Backend         | .NET + Entity Framework Core + CQRS (ligero, sin MediatR)|
 | Base de datos   | Supabase (PostgreSQL)                         |
 | Autenticación   | Supabase Auth (email/password, JWT)          |
 | Hosting front   | Vercel                                        |
@@ -36,10 +36,12 @@ Pensado para una familia, con el modelo preparado para escalar a varias en el fu
 
 ```
 puchero/
-├── README.md          ← estás aquí
+├── README.md          ← estás aquí (overview + enlaces)
 ├── docs/
-│   └── documento-definitivo.md   ← especificación completa del proyecto
-├── backend/           ← API .NET (CQRS + EF Core)
+│   ├── documento-definitivo.md   ← especificación completa (fuente de verdad)
+│   └── archive/                  ← documentos históricos (briefs superados)
+├── design/            ← fuente de verdad VISUAL (tokens, prototipo, screenshots, handoff)
+├── backend/           ← API .NET en Puchero/Puchero.Api (CQRS ligero + EF Core)
 └── frontend/          ← PWA Angular
 ```
 
@@ -66,8 +68,12 @@ puchero/
 
 ---
 
-## 📖 Documentación
+## 📖 Documentación — dónde está cada cosa
 
-Toda la especificación (modelo de datos, arquitectura de back y front, endpoints, lógica de negocio,
-decisiones de diseño y orden de implementación) vive en
-**[`docs/documento-definitivo.md`](docs/documento-definitivo.md)**.
+Cada tema tiene **una sola fuente de verdad** para evitar duplicados desactualizados:
+
+- **Especificación** (modelo de datos, API, arquitectura, lógica de negocio, hosting, orden de
+  implementación) → **[`docs/documento-definitivo.md`](docs/documento-definitivo.md)**.
+- **Diseño visual** (tokens, componentes, pantallas, prototipo, capturas) →
+  **[`design/`](design/README.md)** y `design/tokens-for-angular.css`.
+- **Histórico** (briefs superados por el handoff) → [`docs/archive/`](docs/archive/).

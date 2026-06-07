@@ -1,5 +1,12 @@
 # 🍲 Puchero — Brief de diseño
 
+> ⚠️ **DOCUMENTO HISTÓRICO (archivado).** Este fue el brief que se le entregó a Claude Design
+> como *entrada*. Su resultado (el diseño hi-fi definitivo) vive ahora en
+> [`design/`](../../design/README.md) y los tokens en `design/tokens-for-angular.css`, que son
+> la **fuente de verdad visual**. Algunas cosas de aquí quedaron superadas — p. ej. este brief
+> describe **3 pestañas** (Semana/Comidas/Calendario), pero el diseño final fusionó la
+> asistencia dentro de **Semana** (2 pestañas). Se conserva solo por trazabilidad.
+
 > Documento para entregar a **Claude Design**. Recoge la identidad, la paleta de colores, la
 > tipografía, los componentes y el detalle de cada pantalla, para que **toda la app siga la misma
 > línea visual y la misma paleta** en todas sus vistas.
