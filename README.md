@@ -77,3 +77,4 @@ Cada tema tiene **una sola fuente de verdad** para evitar duplicados desactualiz
 - **Diseño visual** (tokens, componentes, pantallas, prototipo, capturas) →
   **[`design/`](design/README.md)** y `design/tokens-for-angular.css`.
 - **Histórico** (briefs superados por el handoff) → [`docs/archive/`](docs/archive/).
+- **Progreso y próximos pasos** → [`docs/PROGRESO.md`](docs/PROGRESO.md).
